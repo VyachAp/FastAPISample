@@ -1,0 +1,49 @@
+version: 1
+disable_existing_loggers: False
+formatters:
+    json:
+        "()": "pythonjsonlogger.jsonlogger.JsonFormatter"
+        format: "%(asctime)s %(name)s %(levelname)s %(trace_id)s %(message)s"
+        rename_fields:
+            levelname: severity
+
+handlers:
+    stdout:
+        class: logging.StreamHandler
+        level: DEBUG
+        formatter: json
+        stream: ext://sys.stdout
+
+loggers:
+    svc:
+        level: DEBUG
+        handlers: [stdout]
+        propagate: no
+    aiohttp:
+        level: INFO
+        handlers: [stdout]
+        propagate: no
+    sqlalchemy:
+        level: WARNING
+        handlers: [stdout]
+        propagate: no
+    asyncio:
+        level: WARNING
+        handlers: [stdout]
+        propagate: no
+    gunicorn.error:
+        level: WARNING
+        handlers: [stdout]
+        propogate: no
+    uvicorn.access:
+        level: INFO
+        handlers: [stdout]
+        propogate: no
+    aiokafka:
+        level: INFO
+        handlers: [stdout]
+        propagate: no
+
+root:
+    level: INFO
+    handlers: [stdout]

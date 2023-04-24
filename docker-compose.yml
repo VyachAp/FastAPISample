@@ -1,0 +1,79 @@
+# docker-compose for development processes
+version: '3.4'
+services:
+  db:
+    image: internal-db-image:master
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: svc
+      POSTGRES_DB: main
+      POSTGRES_PASSWORD: qwerty123
+
+  conditionsdb:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: svc
+      POSTGRES_DB: svc
+      POSTGRES_PASSWORD: qwerty123
+    ports:
+      - "33303:5432"
+    volumes:
+      - postgres_conditions:/var/lib/postgresql/data
+
+  service:
+    image: promotion-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      DB_USERNAME: svc
+      DB_PASSWORD: qwerty123
+      DB_HOST: db
+      DB_BASE_NAME: main
+      CONDITIONS_DB_USERNAME: svc
+      CONDITIONS_DB_PASSWORD: qwerty123
+      CONDITIONS_DB_HOST: conditionsdb
+      CONDITIONS_DB_BASE_NAME: svc
+      KAFKA_BOOTSTRAP: kafka:9092
+      KAFKA_GROUP_ID: promotion
+    command: ["api-local"]
+
+  zookeeper:
+    image: "confluentinc/cp-zookeeper"
+    ports:
+      - 32181:32181
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=32181
+
+  kafka:
+    image: confluentinc/cp-kafka
+    ports:
+      - 9092:9092
+      - 29092:29092
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:32181
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT_HOST://localhost:29092,PLAINTEXT://kafka:9092
+      - KAFKA_BROKER_ID=1
+      - KAFKA_MESSAGE_MAX_BYTES=2147483647
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    restart: always
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:32181
+volumes:
+  postgres_conditions:
